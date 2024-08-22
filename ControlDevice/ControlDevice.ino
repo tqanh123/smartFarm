@@ -202,26 +202,32 @@ void TaskUpdateButton(void *pvParameters) {
         payload = http.getString();
         Serial.println("Response: " +  payload);
 
-        int relayIndex = 0;
         int start = 0;
         int end = payload.indexOf("<br>", start);
-        while (end != -1 && relayIndex < 32) {
-          String relayState = payload.substring(start, end);
-          int status = (relayState == "ON") ? 1 : 0;
-          if (status != state[relayIndex]) {
-            state[relayIndex] = status;
+        while (end != -1) {
+          String line = payload.substring(start, end);
+          int separatorIndex = line.indexOf(" - Button State: ");
+          if (separatorIndex != -1) {
+            String idStr = line.substring(4, separatorIndex); // Extract ID
+            String stateStr = line.substring(separatorIndex + 17); // Extract button state
 
-            String mqttMess = "!RELAY" + String(relayIndex) + (status == 1 ? ":ON#" : ":OFF#");  
-            if (status == 1) {
-              Serial.println("Relay " + String(relayIndex + 1) + " turned ON");
-            } else {
-              Serial.println("Relay " + String(relayIndex + 1) + " turned OFF");
+            int relayIndex = idStr.toInt() - 1; // Convert ID to relay index (assuming IDs start from 1)
+            int status = (stateStr == "ON") ? 1 : 0;
+
+            if (relayIndex >= 0 && relayIndex < 32 && status != state[relayIndex]) {
+              state[relayIndex] = status;
+
+              String mqttMess = "!RELAY" + String(relayIndex) + (status == 1 ? ":ON#" : ":OFF#");  
+              if (status == 1) {
+                Serial.println("Relay " + String(relayIndex + 1) + " turned ON");
+              } else {
+                Serial.println("Relay " + String(relayIndex + 1) + " turned OFF");
+              }
+              sendMQTTMessage(mqttMess.c_str());
             }
-            sendMQTTMessage(mqttMess.c_str());
           }
           start = end + 4; // Move past the "<br>"
           end = payload.indexOf("<br>", start);
-          relayIndex++;
         }
       } else {
         Serial.println("Error on sending POST: " + String(httpCode));

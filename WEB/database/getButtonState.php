@@ -20,7 +20,7 @@ if (!empty($data)) {
     $stmt->execute();
 
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        echo $row['button_state'] . "<br>";
+        echo "ID: " . $row['id'] . " - Button State: " . $row['button_state'] . "<br>";
     }
     
     Database::disconnect();
